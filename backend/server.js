@@ -24,7 +24,7 @@ const allowedOrigin = [
 const io = new Server(server, {
     cors: {
         origin: allowedOrigin,
-        methods: ['GET', 'POST', 'PUT', 'DELETE',  'OPTIONS'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization'],
     }
@@ -34,7 +34,7 @@ app.use(cors({
     origin: allowedOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization',"X-Requested-With"],
+    allowedHeaders: ['Content-Type', 'Authorization', "X-Requested-With"],
 }))
 
 app.use(express.json());
@@ -51,8 +51,8 @@ app.use("/api/sessions", sessionRoutes);
 
 io.on("connection", (socket) => {
     console.log(`A user Connected ${socket.id}`);
-    const userId=socket.handshake.query.userId;
-    if(userId){
+    const userId = socket.handshake.query.userId;
+    if (userId) {
 
         socket.join(userId);
         console.log(`User ${socket.id} joined room: ${userId}`);
