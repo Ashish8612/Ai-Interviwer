@@ -19,7 +19,8 @@ load_dotenv(dotenv_path=env_path)
 
 AI_SERVICE_PORT = int(os.getenv("PORT", os.getenv("AI_SERVICE_PORT", 8000)))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash-lite").strip()
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash").strip()
+WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL_NAME", "tiny.en").strip()
 
 gemini_client = None
 if GEMINI_API_KEY:
@@ -44,12 +45,19 @@ app.add_middleware(
 
 WHISPER_MODEL = None
 
-try:
-    print("Loading Whisper Model ...")
-    WHISPER_MODEL = whisper.load_model("base.en")
-    print("Whisper Model Loaded Successfully")
-except Exception as e:
-    print("Error while loading Whisper Model:", e)
+def get_whisper_model():
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None:
+        try:
+            import torch
+            torch.set_num_threads(1)
+            print(f"Loading Whisper Model ({WHISPER_MODEL_NAME}) on-demand...")
+            WHISPER_MODEL = whisper.load_model(WHISPER_MODEL_NAME)
+            print("Whisper Model Loaded Successfully")
+        except Exception as e:
+            print(f"Whisper Model could not be loaded: {e}")
+            WHISPER_MODEL = False
+    return WHISPER_MODEL if WHISPER_MODEL is not False else None
 
 class QuestionRequest(BaseModel):
     role: str = "MERN Stack Developer"
@@ -92,6 +100,22 @@ def get_gemini_client() -> genai.Client:
         status_code=500,
         detail="GEMINI_API_KEY is missing. Please set your GEMINI_API_KEY in ai-service/.env."
     )
+
+def transcribe_with_gemini(audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
+    try:
+        client = get_gemini_client()
+        valid_mime = mime_type if mime_type and mime_type.startswith("audio/") else "audio/webm"
+        response = client.models.generate_content(
+            model=GEMINI_MODEL_NAME,
+            contents=[
+                types.Part.from_bytes(data=audio_bytes, mime_type=valid_mime),
+                "Provide a direct verbatim transcription of this spoken audio. Return ONLY the transcribed text without any extra commentary, greetings, or formatting."
+            ]
+        )
+        return response.text.strip() if response.text else ""
+    except Exception as e:
+        print(f"Gemini fallback transcription error: {e}")
+        return ""
 
 @app.get("/")
 async def root():
@@ -148,27 +172,35 @@ async def generate_questions(request: QuestionRequest):
 
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
+    audio_bytes = await file.read()
+    mime_type = file.content_type or "audio/webm"
     temp_audio_path = None
-    try:
-        audio_bytes = await file.read()
-        audio_in_memory = io.BytesIO(audio_bytes)
-        audio_segment = AudioSegment.from_file(audio_in_memory)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
-            temp_audio_path = tmp.name
-            audio_segment.export(temp_audio_path, format="mp3")
-        if not WHISPER_MODEL:
-            raise HTTPException(status_code=503, detail="Whisper Model is not loaded")
-        
-        result = WHISPER_MODEL.transcribe(temp_audio_path)
-                
-        if os.path.exists(temp_audio_path):
-            os.remove(temp_audio_path)
-        return {"transcription": result["text"].strip()}
 
-    except Exception as e:
-        if temp_audio_path and os.path.exists(temp_audio_path):
-            os.remove(temp_audio_path)
-        raise HTTPException(status_code=500, detail=str(e))
+    # 1. Try local Whisper model (tiny.en) if resources allow
+    model = get_whisper_model()
+    if model:
+        try:
+            audio_in_memory = io.BytesIO(audio_bytes)
+            audio_segment = AudioSegment.from_file(audio_in_memory)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+                temp_audio_path = tmp.name
+                audio_segment.export(temp_audio_path, format="mp3")
+
+            result = model.transcribe(temp_audio_path)
+            if os.path.exists(temp_audio_path):
+                os.remove(temp_audio_path)
+            return {"transcription": result["text"].strip()}
+        except Exception as e:
+            print(f"Whisper transcription failed, falling back to Gemini: {e}")
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                os.remove(temp_audio_path)
+
+    # 2. Resilient Fallback: Google Gemini audio transcription (0 MB server RAM overhead)
+    gemini_transcription = transcribe_with_gemini(audio_bytes, mime_type)
+    if gemini_transcription:
+        return {"transcription": gemini_transcription}
+
+    raise HTTPException(status_code=500, detail="Audio transcription could not be completed.")
 
 @app.post("/evaluate", response_model=EvaluationResponse)
 async def evaluate(request: EvaluationRequest):
