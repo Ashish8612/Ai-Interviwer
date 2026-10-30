@@ -12,20 +12,16 @@ import { uploadSingleAudio } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Apply auth protection to ALL routes in this file automatically
 router.use(protect);
 
-// 1. Root Routes ("/")
 router.route("/")
-    .get(getSessions)      // Fetch all sessions
-    .post(createSession);  // Create new session
+    .get(getSessions)
+    .post(createSession);
 
-// 2. ID Routes ("/:id")
 router.route("/:id")
-    .get(getSessionById)   // View session details
-    .delete(deleteSession); // Delete session
+    .get(getSessionById)
+    .delete(deleteSession);
 
-// 3. Action Routes
 router.route("/:id/submit-answer").post(uploadSingleAudio, submitAnswer);
 router.route("/:id/end").post(endSession);
 

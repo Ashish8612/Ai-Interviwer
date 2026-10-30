@@ -1,4 +1,4 @@
-import  { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import { getSessionById } from '../features/sessions/sessionSlice';
@@ -25,22 +25,17 @@ const formatIdealAnswer = (text) => {
 
         let cleanText = text.trim();
 
-        // 1. Remove Markdown code blocks if the AI added them (e.g., ```json ... ```)
         if (cleanText.startsWith('```')) {
             cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
         }
 
-        // 2. Check if it's a JSON object
         if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
             const parsed = JSON.parse(cleanText);
 
-            // Scenario A: The "Merged" Hallucination (Fixes Screenshot 266)
-            // The AI put the score object inside the answer. We extract just the answer.
             if (parsed.verbalAnswer || parsed.idealAnswer || parsed.idealanswer) {
                 return parsed.verbalAnswer || parsed.idealAnswer || parsed.idealanswer;
             }
 
-            // Scenario B: Structured Explanation (Fixes Screenshot 267/268)
             const explanation = parsed.explanation || parsed.understanding || "";
             const code = parsed.code || parsed.codeExample || parsed.example || "";
 
@@ -49,10 +44,8 @@ const formatIdealAnswer = (text) => {
             }
         }
 
-        // Scenario C: It's just a normal string
         return text;
-    } catch (e) {
-        // If parsing fails, just show the raw text so nothing crashes
+    } catch {
         return text;
     }
 };
@@ -93,8 +86,6 @@ function SessionReview() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12 animate-in fade-in duration-700">
-
-            {/* --- Header --- */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-100 pb-6 sm:pb-10">
                 <div>
                     <span className="text-teal-600 font-black uppercase tracking-[0.2em] text-[10px]">Assessment Complete</span>
@@ -104,7 +95,6 @@ function SessionReview() {
                 </div>
             </div>
 
-            {/* --- Summary Stats --- */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x">
                 {[
                     { label: 'Overall Result', value: `${overallScore}%`, color: 'teal' },
@@ -119,7 +109,6 @@ function SessionReview() {
                 ))}
             </div>
 
-            {/* --- Chart --- */}
             <div className="bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-sm border border-slate-50">
                 <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">Per-Question Performance</h3>
                 <div className="h-64 sm:h-80">
@@ -137,7 +126,6 @@ function SessionReview() {
                 </div>
             </div>
 
-            {/* --- Detailed Question Review --- */}
             <div className="space-y-6 sm:space-y-10">
                 <h3 className="text-xl sm:text-3xl font-black text-slate-900 px-2 flex items-center tracking-tighter uppercase">
                     <span className="w-8 h-8 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 sm:mr-5 text-base sm:text-xl">✓</span>
@@ -147,8 +135,6 @@ function SessionReview() {
                     {questions.map((q, index) => (
                         <div key={index} className="bg-white rounded-3xl sm:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-lg transition-all duration-500">
                             <div className="p-6 sm:p-10 space-y-6 sm:space-y-8">
-
-                                {/* Header: Question & Scores */}
                                 <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-6">
                                     <h4 className="text-lg sm:text-2xl font-bold text-slate-800 flex-1 leading-snug">
                                         <span className="text-teal-500 mr-2 font-black italic">Q{index + 1}.</span> {sanitizeQuestionText(q.questionText)}
@@ -165,12 +151,9 @@ function SessionReview() {
                                     </div>
                                 </div>
 
-                                {/* --- User's Submission Display (Corrected) --- */}
                                 <div className="space-y-3">
                                     <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">Your Submission</label>
                                     <div className="bg-slate-50 rounded-2xl sm:rounded-[2rem] border border-slate-100 overflow-hidden">
-
-                                        {/* Display Code if available */}
                                         {q.userSubmittedCode && q.userSubmittedCode !== "undefined" && (
                                             <div className="p-4 sm:p-6 border-b border-slate-200 last:border-0">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Code</span>
@@ -180,7 +163,6 @@ function SessionReview() {
                                             </div>
                                         )}
 
-                                        {/* Display Transcript if available */}
                                         {q.userAnswerText && (
                                             <div className="p-4 sm:p-6">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Transcript</span>
@@ -190,7 +172,6 @@ function SessionReview() {
                                             </div>
                                         )}
 
-                                        {/* Fallback if nothing was recorded */}
                                         {(!q.userSubmittedCode || q.userSubmittedCode === "undefined") && !q.userAnswerText && (
                                             <div className="p-6 text-center text-slate-400 text-xs italic">
                                                 No answer recorded.
@@ -199,7 +180,6 @@ function SessionReview() {
                                     </div>
                                 </div>
 
-                                {/* Feedback & Ideal Answer Grid */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 pt-6 sm:pt-8 border-t border-slate-50">
                                     <div className="space-y-3">
                                         <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">AI Analytical Feedback</label>
@@ -210,7 +190,6 @@ function SessionReview() {
                                     <div className="space-y-3">
                                         <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">Ideal Implementation</label>
                                         <pre className="bg-slate-900 text-slate-400 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] text-[11px] sm:text-[13px] overflow-x-auto whitespace-pre-wrap font-mono shadow-inner leading-relaxed">
-                                            {/* Using the updated helper function here */}
                                             {formatIdealAnswer(q.idealAnswer)}
                                         </pre>
                                     </div>

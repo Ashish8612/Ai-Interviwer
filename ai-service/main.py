@@ -17,11 +17,10 @@ from pydub import AudioSegment
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=env_path)
 
-AI_SERVICE_PORT = int(os.getenv("AI_SERVICE_PORT", 8000))
+AI_SERVICE_PORT = int(os.getenv("PORT", os.getenv("AI_SERVICE_PORT", 8000)))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash-lite").strip()
 
-# Initialize Gemini Client
 gemini_client = None
 if GEMINI_API_KEY:
     try:
@@ -84,7 +83,6 @@ def get_gemini_client() -> genai.Client:
     if gemini_client:
         return gemini_client
     
-    # Check again in case env was updated
     key = os.getenv("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY
     if key:
         gemini_client = genai.Client(api_key=key)

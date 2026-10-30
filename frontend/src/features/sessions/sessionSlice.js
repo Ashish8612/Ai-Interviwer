@@ -1,16 +1,15 @@
-// frontend/src/features/sessions/sessionSlice.js
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/sessions/`;
 
-const api = axios.create({ baseURL: API_URL })
+const api = axios.create({ baseURL: API_URL });
 api.interceptors.request.use((request) => {
     const user = JSON.parse(localStorage.getItem('user'));
     if (user && user.token) {
-        request.headers.Authorization = `Bearer ${user.token}`
+        request.headers.Authorization = `Bearer ${user.token}`;
     }
-    return request
+    return request;
 });
 
 api.interceptors.response.use(
@@ -20,9 +19,9 @@ api.interceptors.response.use(
             localStorage.removeItem('user');
             window.location.href = '/login';
         }
-        return Promise.reject(error)
+        return Promise.reject(error);
     }
-)
+);
 
 const initialState = {
     sessions: [],
@@ -31,7 +30,7 @@ const initialState = {
     isError: false,
     isLoading: false,
     message: ''
-}
+};
 
 export const getSessions = createAsyncThunk('sessions/getAll', async (_, thunkAPI) => {
     try {
@@ -41,7 +40,7 @@ export const getSessions = createAsyncThunk('sessions/getAll', async (_, thunkAP
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
     }
-})
+});
 
 export const createSession = createAsyncThunk('sessions/create', async (sessionData, thunkAPI) => {
     try {
@@ -51,7 +50,7 @@ export const createSession = createAsyncThunk('sessions/create', async (sessionD
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
     }
-})
+});
 
 export const getSessionById = createAsyncThunk('sessions/getOne', async (sessionId, thunkAPI) => {
     try {
@@ -61,7 +60,7 @@ export const getSessionById = createAsyncThunk('sessions/getOne', async (session
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
     }
-})
+});
 
 export const deleteSession = createAsyncThunk('sessions/delete', async (sessionId, thunkAPI) => {
     try {
@@ -72,7 +71,7 @@ export const deleteSession = createAsyncThunk('sessions/delete', async (sessionI
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
     }
-})
+});
 
 export const submitAnswer = createAsyncThunk('sessions/submitAnswer', async ({ sessionId, formData }, thunkAPI) => {
     try {
@@ -83,7 +82,7 @@ export const submitAnswer = createAsyncThunk('sessions/submitAnswer', async ({ s
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
     }
-})
+});
 
 export const endSession = createAsyncThunk('sessions/endSession', async (sessionId, thunkAPI) => {
     try {
@@ -93,9 +92,8 @@ export const endSession = createAsyncThunk('sessions/endSession', async (session
     catch (error) {
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
-
     }
-})
+});
 
 export const sessionSlice = createSlice({
     name: 'sessions',
@@ -134,7 +132,6 @@ export const sessionSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            
             .addCase(getSessions.pending, (state) => { state.isLoading = true; })
             .addCase(getSessions.fulfilled, (state, action) => {
                 state.isLoading = false;
@@ -145,7 +142,11 @@ export const sessionSlice = createSlice({
                 state.isError = true;
                 state.message = action.payload;
             })
-            .addCase(createSession.pending, (state) => { state.isLoading = true; state.isGenerating = true; state.activeSession = null; })
+            .addCase(createSession.pending, (state) => { 
+                state.isLoading = true; 
+                state.isGenerating = true; 
+                state.activeSession = null; 
+            })
             .addCase(createSession.fulfilled, (state) => { state.isLoading = false; })
             .addCase(createSession.rejected, (state, action) => {
                 state.isLoading = false;
@@ -160,26 +161,19 @@ export const sessionSlice = createSlice({
                 state.isLoading = false;
                 state.sessions = state.sessions.filter(s => s._id !== action.payload);
             })
-         
-            .addCase(submitAnswer.pending, (state) => {
-                // Do NOT set global isLoading here, or it freezes the whole app.
-                // We handle button loading locally in the component.
-            })
+            .addCase(submitAnswer.pending, () => {})
             .addCase(submitAnswer.fulfilled, (state, action) => {
-                state.isLoading = false; 
-
-              
+                state.isLoading = false;
                 if (action.payload && Array.isArray(action.payload.questions)) {
                     state.activeSession = action.payload;
                 }
-                
             })
             .addCase(submitAnswer.rejected, (state, action) => {
                 state.isError = true;
                 state.message = action.payload;
             });
     }
-})
+});
 
 export const { reset, socketUpdateSession, setActiveSession } = sessionSlice.actions;
 export default sessionSlice.reducer;

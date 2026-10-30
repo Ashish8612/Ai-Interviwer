@@ -1,4 +1,3 @@
-// frontend/src/pages/InterviewRunner.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -47,6 +46,7 @@ const ROLE_LANGUAGE_MAP = {
   "UI/UX Designer": "css",
   "Product Manager": "markdown"
 };
+
 function InterviewRunner() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -56,9 +56,6 @@ function InterviewRunner() {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedLanguage, setSelectedLanguage] = useState('javascript');
-
-
-  // If submittedLocal[0] is true, we lock Question 0 immediately.
   const [submittedLocal, setSubmittedLocal] = useState({});
 
   const [drafts, setDrafts] = useState(() => {
@@ -76,13 +73,10 @@ function InterviewRunner() {
 
   useEffect(() => {
     if (activeSession?.role) {
-      const detectedLang =
-        ROLE_LANGUAGE_MAP[activeSession.role] || "plaintext";
-
+      const detectedLang = ROLE_LANGUAGE_MAP[activeSession.role] || "plaintext";
       setSelectedLanguage(detectedLang);
     }
   }, [activeSession?.role]);
-
 
   useEffect(() => {
     localStorage.setItem(`drafts_${sessionId}`, JSON.stringify(drafts));
@@ -94,19 +88,10 @@ function InterviewRunner() {
 
   const currentQuestion = activeSession?.questions?.[currentQuestionIndex];
 
-
-  // 1. Is it submitted in Redux? (Backend confirmed)
   const isReduxSubmitted = currentQuestion?.isSubmitted === true;
-
-  // 2. Did I just click submit locally? (Optimistic update)
   const isLocallySubmitted = submittedLocal[currentQuestionIndex] === true;
-
-  // 3. Lock if EITHER is true
   const isQuestionLocked = isReduxSubmitted || isLocallySubmitted;
-
-  // 4. Show "Analyzing..." status if Locked AND not yet evaluated
   const isProcessing = isQuestionLocked && !currentQuestion?.isEvaluated;
-
 
   const handleNavigation = (index) => {
     if (index >= 0 && index < activeSession?.questions.length) {
@@ -175,7 +160,6 @@ function InterviewRunner() {
       return;
     }
 
-    // ✅ 1. OPTIMISTIC UPDATE: Lock UI instantly
     setSubmittedLocal(prev => ({ ...prev, [currentQuestionIndex]: true }));
 
     const formData = new FormData();
@@ -183,11 +167,9 @@ function InterviewRunner() {
     if (code) formData.append('code', code);
     if (audio) formData.append('audioFile', audio, 'answer.webm');
 
-    // ✅ 2. Send Request
     dispatch(submitAnswer({ sessionId, formData }))
       .unwrap()
-      .catch((err) => {
-        // If backend fails, UNLOCK so user can try again
+      .catch(() => {
         setSubmittedLocal(prev => ({ ...prev, [currentQuestionIndex]: false }));
         toast.error("Submission failed. Please try again.");
       });
@@ -202,7 +184,7 @@ function InterviewRunner() {
         localStorage.removeItem(`drafts_${sessionId}`);
         navigate(`/review/${sessionId}`);
       })
-      .catch(err => toast.error("Could not finish session. Ai is working on it."));
+      .catch(() => toast.error("Could not finish session. AI is working on it."));
   };
 
   if (!activeSession) return <div className="text-center py-20 text-slate-400">Loading...</div>;
@@ -321,7 +303,6 @@ function InterviewRunner() {
         </button>
 
         <div className="flex flex-col items-center">
-          {/* ✅ STATUS BAR: Shows if Locked but not Evaluated yet */}
           {isProcessing && message && (
             <div className="mb-2 text-xs font-mono text-blue-600 bg-blue-50 px-3 py-1 rounded-full animate-pulse border border-blue-100">
               🤖 {message}...

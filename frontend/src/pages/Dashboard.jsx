@@ -133,9 +133,8 @@ const Dashboard = () => {
             {isProcessing ? <><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span> Generating...</> : <span className="text-sm">Start Interview</span>}
           </button>
         </form>
-</div> {/* 3. Closing div for the card moved here */}
+      </div>
 
-      {/* HISTORY LIST (Now separate from the creation card) */}
       <div className="space-y-6 pb-20 sm:pb-0">
         <h2 className="text-xl sm:text-2xl font-black text-slate-800 flex items-center px-2"><span className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 rounded-lg sm:rounded-xl flex items-center justify-center mr-3 text-sm sm:text-lg">📊</span> Interview History</h2>
         {isLoading && sessions.length === 0 ? (
